@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-FK92RC6VPR"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-FK92RC6VPR');
+    </script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Salud Pro - Versión Usuario Final</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --azul: #1e40af; --morado: #7e22ce; --fondo: #f8fafc;
+            --rojo-fuerte: #dc2626; --rojo-suave: #fee2e2;
+            --verde-ok: #16a34a; --amarillo: #fef9c3; --gris: #64748b;
+            --naranja: #f59e0b;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background: var(--fondo); padding-top: 155px; padding-bottom: 50px; user-select: none; }
+
+        /* HEADER */
+        .header-app {
+            position: fixed; top: 0; width: 100%; max-width: 850px; left: 50%; transform: translateX(-50%);
+            background: linear-gradient(135deg, var(--azul), var(--morado));
+            color: white; text-align: center; padding: 15px; z-index: 2000; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        .navbar {
+            position: fixed; top: 80px; width: 100%; max-width: 850px; left: 50%; transform: translateX(-50%);
+            background: white; display: flex; border-bottom: 3px solid #cbd5e1; z-index: 1999;
+        }
+        .nav-item {
+            flex: 1; padding: 12px 5px; text-align: center; cursor: pointer; font-weight: bold; font-size: 11px; color: #64748b;
+        }
+        .nav-item.active { color: var(--azul); border-bottom: 4px solid var(--azul); background: #f8fafc; }
+
+        .container { max-width: 850px; margin: 0 auto; background: white; min-height: 80vh; padding: 20px; box-shadow: 0 0 20px rgba(0,0,0,0.05); }
+
+        /* FORMULARIO */
+        .f-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #334155; font-size: 14px; }
+        input, select, textarea { width: 100%; padding: 12px; border: 2px solid #cbd5e1; border-radius: 8px; font-size: 16px; }
+        .btn-save { width: 100%; padding: 16px; background: var(--azul); color: white; border: none; border-radius: 12px; font-size: 18px; font-weight: bold; cursor: pointer; }
+
+        /* REGISTROS */
+        .card-reg { border: 4px solid #cbd5e1; border-radius: 12px; padding: 15px; margin-bottom: 20px; position: relative; background: #fff; }
+        .card-header-btns { position: absolute; top: 10px; right: 10px; display: flex; gap: 5px; }
+        .btn-mini { padding: 6px 12px; font-size: 12px; font-weight: bold; border-radius: 6px; border: none; cursor: pointer; }
+        .btn-edit { background: var(--naranja); color: #000; }
+        .btn-del { background: var(--rojo-fuerte); color: #fff; }
+        .card-paciente { font-weight: bold; color: var(--azul); font-size: 14px; margin-bottom: 4px; }
+        .card-med { font-size: 20px; font-weight: 800; color: #1e293b; margin-bottom: 4px; }
+        .card-tipo { color: var(--azul); font-weight: bold; font-size: 14px; margin-bottom: 4px; }
+        .card-termino { color: var(--rojo-fuerte); font-weight: 900; }
+        .card-line { margin-bottom: 6px; font-size: 14px; color: #334155; display: flex; align-items: baseline; flex-wrap: wrap;}
+        .lbl-negrita { font-weight: bold; margin-right: 5px; color: #000; }
+        .val-azul-negrita { font-weight: 800; color: var(--azul); }
+        .val-normal { font-weight: normal; color: #475569; }
+        .val-alarma-style { font-weight: normal; color: #000000; } 
+        .card-footer { background: #f8fafc; padding: 10px; border-radius: 6px; font-size: 13px; margin-top: 10px; border: 1px solid #e2e8f0; }
+        .btn-excel { background: var(--verde-ok); color: white; border: none; padding: 10px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 12px; float: right; margin-bottom: 15px; }
+
+        /* SECCIÓN 3 ANIMACIÓN */
+        @keyframes parpadeoBorde { 
+            0% { border-color: var(--rojo-fuerte); box-shadow: 0 0 5px var(--rojo-fuerte); }
+            50% { border-color: #ef4444; box-shadow: 0 0 15px #ef4444; }
+            100% { border-color: var(--rojo-fuerte); box-shadow: 0 0 5px var(--rojo-fuerte); }
+        }
+        .msg-bloqueo { color: var(--rojo-fuerte); font-weight: bold; text-align: center; margin-bottom: 15px; font-size: 14px; border: 1px solid var(--rojo-fuerte); padding: 10px; background: #fff0f0; border-radius: 8px; }
+        .toma-item { display: flex; align-items: center; padding: 15px; border: 2px solid #cbd5e1; border-radius: 12px; margin-bottom: 12px; }
+        .toma-pendiente { background-color: var(--rojo-suave); border-color: #fca5a5; }
+        .toma-futura { background-color: var(--amarillo); border-color: #fde047; }
+        .toma-marcada { background-color: #f1f5f9; opacity: 0.6; }
+        .toma-marcada .texto-tachado { text-decoration: line-through; text-decoration-style: double; color: var(--gris); }
+        
+        .toma-bloqueada { opacity: 0.4; pointer-events: none; background: #e2e8f0; filter: grayscale(100%); }
+        .toma-espera { background: #f8fafc; border-color: #cbd5e1; opacity: 0.8; }
+
+        .contenedor-check { width: 42px; height: 42px; margin-right: 15px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+        .circulo-vacio { width: 100%; height: 100%; border-radius: 50%; border: 3px solid var(--azul); background: white; cursor: pointer; }
+        .circulo-lleno { width: 100%; height: 100%; border-radius: 50%; border: 3px solid var(--verde-ok); background: var(--verde-ok); color: white; font-size: 24px; font-weight: 900; display: flex; align-items: center; justify-content: center; }
+        .circulo-disabled { border: 3px solid #94a3b8; background: #e2e8f0; cursor: not-allowed; }
+
+        .pendientes-grupo { border: 3px dashed var(--rojo-fuerte); padding: 15px; border-radius: 10px; margin-bottom: 15px; background: #fff1f2; display: flex; justify-content: space-between; align-items: center; animation: parpadeoBorde 1.5s infinite; }
+        .titulo-pendiente { font-weight: 800; font-size: 15px; color: var(--rojo-fuerte); text-transform: uppercase; }
+        .hidden { display: none !important; }
+        
+        /* MODAL */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; align-items: center; justify-content: center; padding: 20px; }
+        .modal-box { background: white; padding: 25px; border-radius: 20px; width: 100%; max-width: 380px; text-align: center; }
+        .modal-header { font-weight: bold; color: #1e293b; margin-bottom: 15px; font-size: 15px; }
+    </style>
+</head>
+<body onclick="activarProtocoloVigilia()">
+
+    <header class="header-app">
+        <h1>Administrador de Medicamentos</h1>
+        <p style="font-size: 12px;">y/o actividad de salud para adultos mayores</p>
+    </header>
+
+    <nav class="navbar">
+        <div class="nav-item active" onclick="nav(0, 'sec-add')">➕<br>AGREGAR</div>
+        <div class="nav-item" onclick="nav(1, 'sec-list')">📋<br>REGISTROS</div>
+        <div class="nav-item" onclick="nav(2, 'sec-today')">⏰<br>MIS REGISTROS HOY<br>(Y PENDIENTES)</div>
+    </nav>
+
+    <div class="container">
+        <div id="sec-add">
+            <input type="hidden" id="edit-id">
+            <div class="f-group"><label>👤 Nombre del Paciente</label><input type="text" id="paciente" placeholder="Nombre completo"></div>
+            <div class="f-group"><label>💊 Medicamento / Actividad</label><input type="text" id="medicina" placeholder="Ej: Losartan"></div>
+            <div class="f-group"><label>⚖️ Dosis / Detalle</label><input type="text" id="dosis" placeholder="Ej: 1 pastilla"></div>
+            
+            <div class="f-group">
+                <label>🛠️ Tipo de tratamiento</label>
+                <select id="tipo" onchange="toggleTemporal(this.value)">
+                    <option value="permanente">Permanente</option>
+                    <option value="temporal">Temporal</option>
+                </select>
+            </div>
+            <div id="box-dias" class="f-group hidden"><label>📅 Duración en días</label><input type="number" id="duracion" value="1" min="1"></div>
+            <div class="f-group"><label>📅 Fecha Inicio</label><input type="date" id="f-inicio"></div>
+            <div class="f-group"><label>🕒 Hora Inicio</label><input type="time" id="h-inicio"></div>
+
+            <div class="f-group">
+                <label>🔄 Frecuencia</label>
+                <select id="frecuencia" onchange="toggleFrecDias(this.value)">
+                    <option value="4">Cada 4 horas</option>
+                    <option value="6">Cada 6 horas</option>
+                    <option value="8">Cada 8 horas</option>
+                    <option value="12">Cada 12 horas</option>
+                    <option value="24" selected>Diariamente</option>
+                    <option value="X-DIAS">Cada (cantidad de) días</option>
+                </select>
+            </div>
+            <div id="box-frec-dias" class="f-group hidden"><label>🔢 Cantidad de días</label><input type="number" id="val-frec-dias" value="2" min="2"></div>
+
+            <div class="f-group">
+                <label>🔔 Alarma</label>
+                <select id="alarma" onchange="validarAlarma(this)">
+                    <option value="Sin alarma">Sin alarma</option>
+                    <option value="Moderada">Alarma moderada</option>
+                    <option value="Fuerte">Alarma fuerte</option>
+                </select>
+            </div>
+            <div class="f-group"><label>📝 Notas Adicionales</label><textarea id="notas" rows="2"></textarea></div>
+            <button class="btn-save" id="btn-save" onclick="guardarDatos()">💾 GUARDAR REGISTRO</button>
+        </div>
+
+        <div id="sec-list" class="hidden">
+            <button class="btn-excel" onclick="validarExcel()">descarga excel histórico</button>
+            <div id="cont-registros"></div>
+        </div>
+
+        <div id="sec-today" class="hidden">
+            <div id="header-fecha" style="font-weight: 800; font-size: 16px; color: var(--azul); margin-bottom: 10px;"></div>
+            
+            <div id="aviso-bloqueo" class="msg-bloqueo hidden">⚠️ TIENES PENDIENTES DE DÍAS ANTERIORES.<br>Márcalos para habilitar las tomas de hoy.</div>
+            
+            <div id="cont-pendientes"></div>
+            <hr id="hr-sep" style="margin: 15px 0; border-top: 1px solid #ddd;" class="hidden">
+            <div id="cont-hoy"></div>
+        </div>
+    </div>
+
+    <div id="modal-sec" class="modal">
+        <div class="modal-box">
+            <div id="modal-txt" class="modal-header"></div>
+            <input type="password" id="input-clave" placeholder="ingrese clave">
+            <button class="btn-save" style="margin-top:15px; padding:10px; background:var(--verde-ok);" onclick="checkClave()">Validar</button>
+            <button class="btn-save" style="margin-top:5px; padding:10px; background:var(--gris);" onclick="cerrarModal()">Cancelar</button>
+        </div>
+    </div>
+
+    <script>
+        // LLAVES ÚNICAS PARA VERSIÓN FINAL LIMPIA
+        const KEY_MEDS = "DB_MEDS_USER_FINAL_GA";
+        const KEY_TOMAS = "DB_TOMAS_USER_FINAL_GA";
+        
+        const PASS_SONIDO = "SONIDOjpm2026";
+        const PASS_EXCEL = "HISTORICOjpm2026";
+
+        let medicinas = JSON.parse(localStorage.getItem(KEY_MEDS) || '[]');
+        let tomas = JSON.parse(localStorage.getItem(KEY_TOMAS) || '{}');
+        let audioCtx = null, wakeLock = null, modoClave = "", audioIniciado = false;
+
+        document.getElementById('f-inicio').valueAsDate = new Date();
+
+        async function activarProtocoloVigilia() {
+            if(audioIniciado) return;
+            if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if(audioCtx.state === 'suspended') await audioCtx.resume();
+            
+            // Loop silencioso
+            const buffer = audioCtx.createBuffer(1, 1, 22050);
+            const source = audioCtx.createBufferSource();
+            source.buffer = buffer; source.loop = true;
+            source.connect(audioCtx.destination); source.start();
+            
+            try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
+            audioIniciado = true;
+        }
+
+        // SISTEMA DE ALARMA (Ciclo 8 segundos: 6 sonando, 2 silencio)
+        setInterval(() => {
+            if(calcularEstadoGlobal()) sonarSirena();
+        }, 8000); 
+
+        function calcularEstadoGlobal() {
+            let hoy = new Date();
+            return medicinas.some(m => {
+                if(m.alarma === 'Sin alarma') return false;
+                let cursor = new Date(m.fIni + "T" + m.hIni);
+                while(cursor <= hoy) {
+                    let key = `${m.id}_${cursor.getTime()}`;
+                    if(!tomas[key]) return true; 
+                    cursor = sumarFrecuencia(cursor, m);
+                }
+                return false;
+            });
+        }
+
+        function sonarSirena() {
+            if(!audioCtx) return;
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = "square";
+            
+            const now = audioCtx.currentTime;
+            osc.frequency.setValueAtTime(880, now);
+            osc.frequency.linearRampToValueAtTime(1200, now + 1);
+            osc.frequency.linearRampToValueAtTime(880, now + 2);
+            osc.frequency.linearRampToValueAtTime(1200, now + 3);
+            osc.frequency.linearRampToValueAtTime(880, now + 4);
+            osc.frequency.linearRampToValueAtTime(1200, now + 5);
+            osc.frequency.linearRampToValueAtTime(880, now + 6);
+
+            gain.gain.value = 0.5;
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(now); osc.stop(now + 6);
+        }
+
+        function nav(idx, id) {
+            document.querySelectorAll('.container > div').forEach(d => d.classList.add('hidden'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById(id).classList.remove('hidden');
+            document.querySelectorAll('.nav-item')[idx].classList.add('active');
+            if(id === 'sec-list') renderRegistros();
+            if(id === 'sec-today') renderHoy();
+        }
+
+        function toggleTemporal(v) { document.getElementById('box-dias').classList.toggle('hidden', v !== 'temporal'); }
+        function toggleFrecDias(v) { document.getElementById('box-frec-dias').classList.toggle('hidden', v !== 'X-DIAS'); }
+
+        function validarAlarma(el) {
+            if(el.value === "Sin alarma") return;
+            modoClave = "ALARMA"; abrirModal("Clave para activar alarma requerida");
+        }
+
+        function guardarDatos() {
+            activarProtocoloVigilia();
+            const idEdit = document.getElementById('edit-id').value;
+            const nuevo = {
+                id: idEdit ? parseInt(idEdit) : Date.now(),
+                paciente: document.getElementById('paciente').value,
+                medicina: document.getElementById('medicina').value,
+                dosis: document.getElementById('dosis').value,
+                tipo: document.getElementById('tipo').value,
+                duracion: document.getElementById('duracion').value,
+                fIni: document.getElementById('f-inicio').value,
+                hIni: document.getElementById('h-inicio').value,
+                frec: document.getElementById('frecuencia').value,
+                frecVal: document.getElementById('val-frec-dias').value,
+                alarma: document.getElementById('alarma').value,
+                notas: document.getElementById('notas').value
+            };
+            if(!nuevo.paciente || !nuevo.medicina) return alert("Faltan datos obligatorios");
+            if(idEdit) medicinas[medicinas.findIndex(m => m.id == idEdit)] = nuevo;
+            else medicinas.push(nuevo);
+            localStorage.setItem(KEY_MEDS, JSON.stringify(medicinas));
+            resetForm(); nav(1, 'sec-list');
+        }
+
+        function resetForm() {
+            document.getElementById('edit-id').value = "";
+            document.getElementById('paciente').value = "";
+            document.getElementById('medicina').value = "";
+            document.getElementById('btn-save').innerText = "💾 GUARDAR REGISTRO";
+            document.getElementById('alarma').value = "Sin alarma";
+        }
+
+        function renderRegistros() {
+            const cont = document.getElementById('cont-registros');
+            cont.innerHTML = "";
+            medicinas.forEach(m => {
+                let duracionVal = m.tipo === 'permanente' ? "Indefinida" : `${m.duracion} días`;
+                let terminoTxt = "";
+                if(m.tipo === 'temporal') {
+                    const fin = calcularFin(m);
+                    terminoTxt = ` <span class="card-termino">(término de tratamiento ${fin.f} ${fin.h})</span>`;
+                }
+                let frecTxt = m.frec === 'X-DIAS' ? `Cada ${m.frecVal} días` : (m.frec == 24 ? "Diariamente" : `Cada ${m.frec} horas`);
+                
+                cont.innerHTML += `
+                <div class="card-reg">
+                    <div class="card-header-btns">
+                        <button class="btn-mini btn-edit" onclick="editar(${m.id})">Editar</button>
+                        <button class="btn-mini btn-del" onclick="eliminar(${m.id})">Eliminar</button>
+                    </div>
+                    <div class="card-paciente">👤 ${m.paciente}</div>
+                    <div class="card-med">${m.medicina}</div>
+                    <div class="card-tipo">Tratamiento ${m.tipo}${terminoTxt}</div>
+                    
+                    <div class="card-line"><span class="lbl-negrita">Duración:</span> <span class="val-normal">${duracionVal}</span></div>
+                    <div class="card-line"><span class="lbl-negrita">Dosis:</span> <span class="val-azul-negrita">${m.dosis}</span></div>
+                    <div class="card-line"><span class="lbl-negrita">Frecuencia:</span> <span class="val-azul-negrita">${frecTxt}</span></div>
+                    <div class="card-line"><span class="lbl-negrita">Inicio de tratamiento:</span> <span class="val-normal">${formatoFecha(m.fIni)} ${m.hIni}</span></div>
+                    <div class="card-line"><span class="lbl-negrita">Alarma:</span> <span class="val-alarma-style">${m.alarma}</span></div>
+                    <div class="card-footer"><span class="lbl-negrita">Notas:</span> <span class="val-azul-negrita">${m.notas || '-'}</span></div>
+                </div>`;
+            });
+        }
+
+        function editar(id) {
+            const m = medicinas.find(x => x.id == id);
+            document.getElementById('edit-id').value = m.id;
+            document.getElementById('paciente').value = m.paciente;
+            document.getElementById('medicina').value = m.medicina;
+            document.getElementById('dosis').value = m.dosis;
+            document.getElementById('frecuencia').value = m.frec;
+            document.getElementById('alarma').value = m.alarma;
+            nav(0, 'sec-add');
+        }
+
+        function eliminar(id) {
+            if(confirm("¿Eliminar?")) {
+                medicinas = medicinas.filter(m => m.id !== id);
+                localStorage.setItem(KEY_MEDS, JSON.stringify(medicinas));
+                renderRegistros();
+            }
+        }
+
+        function renderHoy() {
+            activarProtocoloVigilia();
+            const hoy = new Date();
+            document.getElementById('header-fecha').innerText = `Hoy: ${hoy.toLocaleDateString('es-ES', {weekday:'long', day:'numeric', month:'long'})}`;
+            
+            const contP = document.getElementById('cont-pendientes');
+            const contH = document.getElementById('cont-hoy');
+            contP.innerHTML = "";
+            contH.innerHTML = "";
+
+            let pendientesPorDia = {};
+            let horariosHoy = [];
+            let hayPendientesPrevios = false;
+
+            medicinas.forEach(m => {
+                let cursor = new Date(m.fIni + "T" + m.hIni);
+                let limitePasado = new Date(); limitePasado.setDate(limitePasado.getDate() - 10);
+                
+                let finHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 23, 59, 59);
+                let finTratamiento = new Date(9999, 11, 31);
+                
+                if(m.tipo === 'temporal') {
+                    finTratamiento = new Date(m.fIni + "T" + m.hIni);
+                    finTratamiento.setDate(finTratamiento.getDate() + parseInt(m.duracion));
+                }
+
+                while(cursor <= finHoy && cursor <= finTratamiento) {
+                    if(cursor < limitePasado) { cursor = sumarFrecuencia(cursor, m); continue; }
+
+                    let key = `${m.id}_${cursor.getTime()}`;
+                    let fechaStr = cursor.toLocaleDateString('es-ES');
+                    
+                    if(cursor.toDateString() !== hoy.toDateString()) {
+                        if(!tomas[key]) {
+                            if(!pendientesPorDia[fechaStr]) pendientesPorDia[fechaStr] = [];
+                            pendientesPorDia[fechaStr].push(key);
+                            hayPendientesPrevios = true;
+                        }
+                    } else {
+                        horariosHoy.push({
+                            id: m.id, med: m.medicina, dosis: m.dosis, pac: m.paciente,
+                            hora: new Date(cursor), key: key
+                        });
+                    }
+                    cursor = sumarFrecuencia(cursor, m);
+                }
+            });
+
+            Object.keys(pendientesPorDia).sort().forEach(dia => {
+                const keysJSON = JSON.stringify(pendientesPorDia[dia]);
+                contP.innerHTML += `
+                <div class="pendientes-grupo">
+                    <div class="info-pendiente">
+                        <div class="titulo-pendiente">PENDIENTES DEL ${dia}</div>
+                        <div class="sub-pendiente">Marque aquí para habilitar los medicamentos de hoy</div>
+                    </div>
+                    <div class="contenedor-check">
+                        <div class="circulo-vacio" onclick='marcarGrupo(${keysJSON})'></div>
+                    </div>
+                </div>`;
+            });
+
+            document.getElementById('aviso-bloqueo').classList.toggle('hidden', !hayPendientesPrevios);
+            document.getElementById('hr-sep').classList.toggle('hidden', !hayPendientesPrevios);
+
+            horariosHoy.sort((a,b) => a.hora - b.hora);
+            
+            let bloqueoCascada = hayPendientesPrevios; 
+
+            horariosHoy.forEach(t => {
+                const completada = tomas[t.key];
+                const esPasada = t.hora < hoy;
+                
+                let diffMs = t.hora - hoy;
+                let diffMins = diffMs / 1000 / 60;
+                let esFuturoLejano = diffMins > 5; 
+
+                let disabled = false;
+                if(!completada) {
+                    if(bloqueoCascada) disabled = true; 
+                    else if(esFuturoLejano) disabled = true; 
+                }
+
+                let claseExtra = "";
+                let htmlCheck = "";
+
+                if(completada) {
+                    claseExtra = "toma-marcada";
+                    htmlCheck = `<div class="circulo-lleno" onclick="marcar('${t.key}')">✓</div>`;
+                } else {
+                    if (disabled) {
+                        claseExtra = esFuturoLejano && !bloqueoCascada ? "toma-espera" : "toma-bloqueada";
+                        htmlCheck = `<div class="circulo-vacio circulo-disabled"></div>`;
+                    } else {
+                        claseExtra = esPasada ? "toma-pendiente" : "toma-futura";
+                        htmlCheck = `<div class="circulo-vacio" onclick="marcar('${t.key}')"></div>`;
+                    }
+                }
+
+                contH.innerHTML += `
+                <div class="toma-item ${claseExtra}">
+                    <div class="contenedor-check">
+                        ${htmlCheck}
+                    </div>
+                    <div>
+                        <div class="texto-tachado" style="font-weight:bold; font-size:13px;">${t.hora.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+                        <div class="texto-tachado" style="font-size:17px; font-weight:800;">${t.med} - ${t.dosis}</div>
+                        <div style="font-size:13px; color:var(--gris)">${t.pac}</div>
+                    </div>
+                </div>`;
+
+                if(!completada && esPasada) bloqueoCascada = true;
+            });
+        }
+
+        function sumarFrecuencia(fecha, m) {
+            let nueva = new Date(fecha);
+            if(m.frec === 'X-DIAS') {
+                nueva.setDate(nueva.getDate() + parseInt(m.frecVal));
+            } else {
+                nueva.setHours(nueva.getHours() + parseInt(m.frec));
+            }
+            return nueva;
+        }
+
+        function marcar(key) {
+            if(tomas[key]) delete tomas[key];
+            else tomas[key] = true;
+            localStorage.setItem(KEY_TOMAS, JSON.stringify(tomas));
+            renderHoy();
+        }
+
+        function marcarGrupo(keys) {
+            keys.forEach(k => tomas[k] = true);
+            localStorage.setItem(KEY_TOMAS, JSON.stringify(tomas));
+            renderHoy();
+        }
+
+        function validarExcel() {
+            modoClave = "EXCEL";
+            abrirModal("Debe solicitar clave al administrador de esta aplicación para ejecutar este mandato");
+        }
+
+        function abrirModal(txt) {
+            document.getElementById('modal-txt').innerText = txt;
+            document.getElementById('input-clave').value = "";
+            document.getElementById('modal-sec').style.display = 'flex';
+        }
+
+        function cerrarModal() {
+            document.getElementById('modal-sec').style.display = 'none';
+            if(modoClave === "ALARMA") document.getElementById('alarma').value = "Sin alarma";
+        }
+
+        function checkClave() {
+            const p = document.getElementById('input-clave').value;
+            if(modoClave === "ALARMA" && p === PASS_SONIDO) {
+                document.getElementById('modal-sec').style.display = 'none';
+            } else if(modoClave === "EXCEL" && p === PASS_EXCEL) {
+                document.getElementById('modal-sec').style.display = 'none';
+                generarExcel();
+            } else {
+                alert("Clave incorrecta");
+            }
+        }
+
+        function generarExcel() {
+            const datos = medicinas.map(m => {
+                const fin = m.tipo==='temporal' ? calcularFin(m) : {f:'Indefinido', h:''};
+                let frecTxt = m.frec === 'X-DIAS' ? `Cada ${m.frecVal} días` : `Cada ${m.frec} horas`;
+                return {
+                    "Tipo de tratamiento": m.tipo,
+                    "Frecuencia de tratamiento": frecTxt,
+                    "Duración de tratamiento": m.tipo==='temporal'?m.duracion+' días':'Indefinido',
+                    "Inicio de tratamiento": formatoFecha(m.fIni)+' '+m.hIni, 
+                    "Término de tratamiento": fin.f+' '+fin.h,
+                    "Paciente": m.paciente, 
+                    "Medicamento": m.medicina, 
+                    "Dosis": m.dosis,
+                    "Notas": m.notas, 
+                    "Alarma": m.alarma, 
+                    "Clave Alarma": PASS_SONIDO, 
+                    "Clave Excel": PASS_EXCEL
+                };
+            });
+            const ws = XLSX.utils.json_to_sheet(datos);
+            const wscols = Object.keys(datos[0] || {}).map(k => ({wch: k.length + 5}));
+            ws['!cols'] = wscols;
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Historial_Salud");
+            XLSX.writeFile(wb, "Historial_Salud_JPM.xlsx");
+        }
+        
+        function formatoFecha(f) { if(!f) return ""; const [y,m,d] = f.split('-'); return `${d}-${m}-${y}`; }
+        function calcularFin(m) { let d=new Date(m.fIni+"T"+m.hIni); d.setDate(d.getDate()+parseInt(m.duracion)); return {f:formatoFecha(d.toISOString().split('T')[0]),h:d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}; }
+    </script>
+</body>
+</html>
